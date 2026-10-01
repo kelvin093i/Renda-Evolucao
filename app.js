@@ -14,9 +14,9 @@ const defaults={
   name:"Vanessa"
 };
 
-let state={
+let state = {
   ...defaults,
-  ...JSON.parse(localStorage.getItem(KEY)||"{}")
+  ...JSON.parse(localStorage.getItem(KEY) || "{}")
 };
 
 state.completed=state.completed||{};
