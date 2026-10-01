@@ -14,10 +14,16 @@ const defaults={
   name:"Vanessa"
 };
 
-let state = {
-  ...defaults,
-  ...JSON.parse(localStorage.getItem(KEY) || "{}")
-};
+let state = { ...defaults };
+
+try {
+  const saved = localStorage.getItem(KEY);
+  if (saved) {
+    state = { ...defaults, ...JSON.parse(saved) };
+  }
+} catch (e) {
+  console.log("Estado salvo inválido, usando padrão.");
+}
 
 state.completed=state.completed||{};
 state.workout=state.workout||{};
