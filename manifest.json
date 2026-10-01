@@ -1,0 +1,12 @@
+{
+  "name": "Renda & Evolução",
+  "short_name": "Renda & Evolução",
+  "description": "Aplicativo de físico, treino, renda, estudos e evolução.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#080d19",
+  "theme_color": "#080d19",
+  "lang": "pt-BR",
+  "orientation": "portrait",
+  "icons": []
+}
