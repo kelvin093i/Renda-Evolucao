@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#080d19">
+  <title>Renda & Evolução</title>
+  <style>
+*{box-sizing:border-box}
+:root{
+ --bg:#080d19;--panel:#101726;--panel2:#151d2d;--text:#f4f5f7;--muted:#9ba4b5;
+ --orange:#ff7a00;--orange2:#ff9d18;--green:#16a085;--purple:#7b35a8;--line:#202a3c;
+}
+html,body{margin:0;padding:0;background:#080d19;color:var(--text);font-family:Arial,Helvetica,sans-serif}
+body{min-height:100vh}
+button{font:inherit;color:inherit}
+#app{max-width:720px;margin:auto;min-height:100vh;background:var(--bg)}
+.top{position:sticky;top:0;z-index:10;background:#0b111e;padding:16px 16px 10px;border-bottom:1px solid var(--line)}
+.brand{font-size:22px;font-weight:800}.sub{color:var(--muted);font-size:13px;margin-top:3px}
+.content{padding:18px 16px 100px}
+h1{font-size:27px;margin:6px 0 8px}h2{font-size:21px;margin:22px 0 12px}
+p{line-height:1.5}.muted{color:var(--muted)}
+.hero{padding:20px;border-radius:24px;background:linear-gradient(145deg,#131a2a,#0d1320);border:1px solid var(--line);margin-bottom:16px}
+.xpbar{height:9px;background:#1c2638;border-radius:99px;overflow:hidden}.xpbar>i{display:block;height:100%;background:linear-gradient(90deg,var(--orange),var(--orange2));border-radius:99px}
+.statrow{display:flex;justify-content:space-between;gap:10px;margin:12px 0;color:var(--muted)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:17px;margin:12px 0}
+.card.click{cursor:pointer}.card.click:active{transform:scale(.99)}
+.choice{display:flex;gap:14px;align-items:center;padding:18px;border-radius:22px;margin:12px 0;font-weight:800;font-size:17px;border:1px solid #263148;background:#121a2a}
+.choice small{display:block;color:var(--muted);font-weight:400;margin-top:4px}.emoji{font-size:28px}
+.orange{background:linear-gradient(135deg,#ff6f00,#ffa313);color:white;border:0}
+.green{background:linear-gradient(135deg,#073c3a,#092c31)}
+.purple{background:linear-gradient(135deg,#291340,#3b1853)}
+.sectionTitle{display:flex;justify-content:space-between;align-items:center}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.grid .card{margin:0;min-height:140px}
+.nav{position:fixed;bottom:0;left:0;right:0;margin:auto;max-width:720px;background:rgba(8,13,25,.96);backdrop-filter:blur(10px);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(5,1fr);padding:8px 4px calc(8px + env(safe-area-inset-bottom));z-index:20}
+.nav button{background:none;border:0;padding:8px 2px;color:var(--muted);font-size:11px}.nav b{display:block;font-size:22px;margin-bottom:3px}.nav .active{color:white}.nav .active b{color:var(--orange)}
+.btn{border:0;border-radius:15px;padding:14px 18px;font-weight:800;cursor:pointer;background:var(--orange)}
+.btn.secondary{background:#1a2334}.btn.block{width:100%;margin-top:10px}
+.back{background:none;border:0;color:var(--muted);padding:0;margin-bottom:10px}
+.exercise{display:flex;align-items:center;gap:12px}.exercise input{width:23px;height:23px;accent-color:var(--orange)}
+.exercise.done strong{text-decoration:line-through;color:#8c93a2}.exercise.done{opacity:.8}
+.badge{display:inline-block;border:1px solid #7a3e1d;color:#ff8a32;border-radius:99px;padding:7px 11px;font-size:13px;margin:3px}
+.quiz-q{font-size:20px;font-weight:800;line-height:1.35}.answer{width:100%;text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:16px;margin:7px 0;cursor:pointer}.answer.correct{border-color:#16a085;background:#06302e}.answer.wrong{border-color:#a83232;background:#321218}.answer:disabled{cursor:default}
+.progress{height:8px;background:#202a3c;border-radius:99px;overflow:hidden}.progress i{display:block;height:100%;background:var(--orange)}
+.notice{border:1px solid #6d2630;background:#241019;color:#ffb2b9;padding:15px;border-radius:18px}
+.empty{padding:35px 10px;text-align:center;color:var(--muted)}
+@media(max-width:430px){.grid{grid-template-columns:1fr 1fr}.content{padding-left:14px;padding-right:14px}}
+
+</style>
+</head>
+<body>
+  <div id="app"></div>
+  <script>
+const KEY="re_app_v1";
+const defaultState={
+  firstRun:true, goal:null, xp:0, level:1, streak:0,
+  completed:{},
+  workout:{},
+  quiz:{}
+};
+let state=load();
+let screen=state.firstRun?"goal":"home";
+let quizIndex=0, quizAnswered=false;
+
+function load(){try{return {...defaultState,...JSON.parse(localStorage.getItem(KEY)||"{}")}}catch(e){return {...defaultState}}}
+function save(){localStorage.setItem(KEY,JSON.stringify(state))}
+function addXP(n){state.xp+=n;state.level=Math.floor(state.xp/250)+1;save();render()}
+function esc(s){return s.replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
+function appNav(active){
+ return `<nav class="nav">
+  ${navBtn("home","⌂","Início",active)}
+  ${navBtn("studies","▣","Estudos",active)}
+  ${navBtn("evolution","🚀","Evolução",active)}
+  ${navBtn("income","💰","Renda",active)}
+  ${navBtn("physical","💪","Físico",active)}
+ </nav>`;
+}
+function navBtn(id,icon,label,active){return `<button class="${active===id?"active":""}" onclick="go('${id}')"><b>${icon}</b>${label}</button>`}
+function top(title,sub=""){return `<header class="top"><div class="brand">Renda & Evolução</div>${sub?`<div class="sub">${sub}</div>`:""}</header>`}
+function layout(body,active){document.getElementById("app").innerHTML=top("Renda & Evolução")+`<main class="content">${body}</main>${appNav(active)}`}
+function go(s){screen=s; if(s!=="quiz") quizAnswered=false; render()}
+function render(){
+ if(screen==="goal")return renderGoal();
+ if(screen==="home")return renderHome();
+ if(screen==="physical")return renderPhysical();
+ if(screen==="workout")return renderWorkout();
+ if(screen==="income")return renderIncome();
+ if(screen==="evolution")return renderEvolution();
+ if(screen==="studies")return renderStudies();
+ if(screen==="quiz")return renderQuiz();
+ if(screen==="profile")return renderProfile();
+ renderHome();
+}
+function renderGoal(){
+ document.getElementById("app").innerHTML=`<main class="content" style="padding-top:50px">
+  <div class="hero"><div class="emoji">🚀</div><h1>Qual é seu principal objetivo?</h1><p class="muted">Você pode mudar isso depois no seu perfil.</p></div>
+  ${goal("💪","Melhorar meu físico","Treinos e acompanhamento","physical")}
+  ${goal("💰","Aprender sobre renda","Caminhos para ganhar pelo celular","income")}
+  ${goal("🚀","Evoluir meus hábitos","Metas, disciplina e rotina","evolution")}
+  ${goal("🔥","Quero trabalhar em todos","Físico, renda e evolução juntos","home")}
+ </main>`;
+}
+function goal(e,t,d,target){return `<button class="choice" style="width:100%;text-align:left" onclick="chooseGoal('${target}')"><span class="emoji">${e}</span><span>${t}<small>${d}</small></span></button>`}
+function chooseGoal(target){state.firstRun=false;state.goal=target;save();screen=target==="home"?"home":target;render()}
+function xpCard(){
+ const current=state.xp%250, pct=Math.min(100,current/250*100);
+ return `<div class="hero"><div class="sectionTitle"><b>Nível ${state.level}</b><b>🔥 ${state.streak} dias</b></div>
+ <p class="muted">${250-current} XP para o próximo nível</p><div class="xpbar"><i style="width:${pct}%"></i></div>
+ <div class="statrow"><span>XP total: ${state.xp}</span><span>Próximo: ${state.level+1}</span></div></div>`;
+}
+function renderHome(){
+ layout(`${xpCard()}<div class="card orange click" onclick="go('workout')"><h2 style="margin:0">▶ Começar meu dia 🚀</h2><p style="margin-bottom:0">Progresso de hoje: ${workoutDone()}/6</p></div>
+ <div class="sectionTitle"><h2>Áreas</h2><span class="muted">independente</span></div>
+ <div class="card click" onclick="go('physical')"><b style="font-size:21px">💪 Físico</b><p class="muted">Treinos, hábitos saudáveis e acompanhamento.</p></div>
+ <div class="card click green" onclick="go('income')"><b style="font-size:21px">💰 Renda</b><p class="muted">Ideias e caminhos para começar a aprender.</p></div>
+ <div class="card click purple" onclick="go('evolution')"><b style="font-size:21px">🚀 Evolução</b><p class="muted">Metas, hábitos, disciplina e desenvolvimento pessoal.</p></div>
+ <div class="card click" onclick="go('studies')"><b style="font-size:21px">📚 Estudos</b><p class="muted">Quizzes e progresso por matéria.</p></div>
+ <button class="btn secondary block" onclick="go('profile')">⚙️ Perfil e dados salvos</button>`, "home");
+}
+function renderPhysical(){
+ layout(`<button class="back" onclick="go('home')">‹ Voltar</button><h1>💪 Físico</h1><p class="muted">Orientações iniciais para sua rotina.</p>
+ ${info("🌙","Sono de qualidade","Durma 7–9 horas por noite. O descanso faz parte da recuperação.")}
+ ${info("🍎","Alimentação equilibrada","Inclua variedade de alimentos e uma rotina sustentável.")}
+ ${info("💧","Hidratação","Mantenha uma hidratação adequada ao longo do dia.")}
+ ${info("🔄","Consistência","Treinos curtos e frequentes ajudam a criar uma rotina.")}
+ ${info("❤️","Escute o corpo","Respeite sinais de dor e procure orientação profissional quando necessário.")}
+ <button class="btn block" onclick="go('workout')">🏋️ Ver treino</button>`, "physical");
+}
+function info(e,t,d){return `<div class="card"><div style="font-size:28px">${e}</div><h2 style="margin:8px 0">${t}</h2><p class="muted">${d}</p></div>`}
+const exercises=[
+ ["Agachamento livre","3 séries · 10–12 reps · descanso 60s"],
+ ["Flexão de braço","3 séries · 8–12 reps · descanso 60s"],
+ ["Afundo alternado","3 séries · 10 cada perna · descanso 60s"],
+ ["Elevação pélvica","3 séries · 12–15 reps · descanso 45s"],
+ ["Prancha","3 séries · 20–30s · descanso 45s"],
+ ["Abdominal crunch","3 séries · 15 reps · descanso 45s"]
+];
+function workoutDone(){return exercises.filter((_,i)=>state.workout[i]).length}
+function renderWorkout(){
+ const done=workoutDone();
+ layout(`<button class="back" onclick="go('home')">‹ Voltar</button><h1>🏋️ Treino</h1>
+ <div class="hero"><b>Treino base</b><div class="statrow"><span>~25 min</span><span>${done}/6 concluídos</span><span>+50 XP</span></div><div class="progress"><i style="width:${done/6*100}%"></i></div></div>
+ ${exercises.map((x,i)=>`<label class="card exercise ${state.workout[i]?"done":""}"><input type="checkbox" ${state.workout[i]?"checked":""} onchange="toggleExercise(${i})"><span><strong>${x[0]}</strong><br><span class="muted">${x[1]}</span></span></label>`).join("")}
+ <button class="btn block" onclick="finishWorkout()">Salvar progresso</button>`, "physical");
+}
+function toggleExercise(i){state.workout[i]=!state.workout[i];save();renderWorkout()}
+function finishWorkout(){if(workoutDone()===6&&!state.completed.workout){state.completed.workout=true;state.xp+=50;state.streak=Math.max(1,state.streak+1);state.level=Math.floor(state.xp/250)+1;save()}renderWorkout()}
+function renderIncome(){
+ layout(`<button class="back" onclick="go('home')">‹ Voltar</button><h1>💰 Renda</h1><p class="muted">Módulos educativos. Sem promessa de ganhos garantidos.</p>
+ <div class="card"><h2>Formas de monetização</h2><span class="badge">Comissão por venda</span><span class="badge">Assinaturas</span><span class="badge">Upsells</span></div>
+ <div class="notice">⚠️ Desconfie de métodos que prometem ganhos garantidos sem trabalho. Resultados dependem de estudo, prática e consistência.</div>
+ <div class="card"><p class="muted">👥 Plataformas podem ter requisitos de idade. Verifique as regras de cada serviço.</p></div>
+ <button class="btn block" onclick="finishModule('income')">${state.completed.income?"✓ Módulo concluído":"✓ Concluir este módulo (+15 XP)"}</button>`, "income");
+}
+function finishModule(k){if(!state.completed[k]){state.completed[k]=true;state.xp+=15;state.level=Math.floor(state.xp/250)+1;save()}renderIncome()}
+function renderEvolution(){
+ layout(`<button class="back" onclick="go('home')">‹ Voltar</button><h1>🚀 Evolução</h1><p class="muted">Pequenos passos todos os dias.</p>
+ ${habit("💧","Beber água","Marcar como concluído hoje","agua")}
+ ${habit("📖","Estudar 20 minutos","Criar consistência de aprendizado","estudo")}
+ ${habit("🧹","Organizar uma tarefa","Reduzir acúmulo e manter rotina","ordem")}
+ ${habit("📝","Planejar amanhã","Definir uma prioridade para o próximo dia","planejamento")}`, "evolution");
+}
+function habit(e,t,d,k){let done=!!state.completed["h_"+k];return `<div class="card"><div class="emoji">${e}</div><h2>${t}</h2><p class="muted">${d}</p><button class="btn ${done?"secondary":""}" onclick="toggleHabit('${k}')">${done?"✓ Concluído":"Concluir (+5 XP)"}</button></div>`}
+function toggleHabit(k){let key="h_"+k;if(!state.completed[key]){state.completed[key]=true;state.xp+=5;state.level=Math.floor(state.xp/250)+1}else{state.completed[key]=false;state.xp=Math.max(0,state.xp-5);state.level=Math.floor(state.xp/250)+1}save();renderEvolution()}
+const subjects=["Matemática","Português","História","Geografia","Ciências","Inglês","Tecnologia","Conhecimentos Gerais"];
+function renderStudies(){
+ layout(`<button class="back" onclick="go('home')">‹ Voltar</button><h1>📚 Estudos</h1><p class="muted">Escolha uma matéria e pratique.</p>
+ <div class="grid">${subjects.map((s,i)=>`<div class="card click" onclick="startQuiz(${i})"><div style="font-size:30px">${["➗","📖","🏛️","🌎","🔬","🇬🇧","💻","🌐"][i]}</div><h2 style="margin:10px 0">${s}</h2><span class="muted">3 níveis de quiz</span></div>`).join("")}</div>`, "studies");
+}
+const quizzes=[
+ {subject:"Conhecimentos Gerais",qs:[
+  ["Quem é conhecido como o 'Rei do Futebol'?",["Pelé","Maradona","Messi","Zico"],0],
+  ["Qual é a capital do Brasil?",["São Paulo","Brasília","Rio de Janeiro","Salvador"],1],
+  ["Quantos dias tem uma semana?",["5","6","7","8"],2]
+ ]},
+ {subject:"Matemática",qs:[
+  ["Quanto é 8 × 7?",["54","56","64","48"],1],
+  ["Qual é a metade de 100?",["25","40","50","60"],2],
+  ["Quanto é 15 + 9?",["22","24","26","28"],1]
+ ]},
+ {subject:"Português",qs:[
+  ["Qual palavra é um substantivo?",["correr","bonito","casa","rapidamente"],2],
+  ["Qual é o plural de 'animal'?",["animales","animais","animalis","animãos"],1],
+  ["Qual sinal termina uma pergunta?",[".","!",";", "?"],3]
+ ]}
+];
+let selectedQuiz=0;
+function startQuiz(i){selectedQuiz=Math.min(i,2);quizIndex=0;quizAnswered=false;screen="quiz";render()}
+function renderQuiz(){
+ const q=quizzes[selectedQuiz].qs[quizIndex]; const total=quizzes[selectedQuiz].qs.length;
+ const saved=state.quiz[selectedQuiz]||{correct:0};
+ layout(`<button class="back" onclick="go('studies')">‹ Voltar</button><h1>${total} perguntas</h1>
+ <p class="muted">${quizzes[selectedQuiz].subject} · Fácil</p>
+ <div class="statrow"><span>Progresso</span><span>Pergunta ${quizIndex+1} de ${total}</span></div>
+ <div class="progress"><i style="width:${(quizIndex+1)/total*100}%"></i></div>
+ <div class="card"><div class="quiz-q">${esc(q[0])}</div></div>
+ <div id="answers">${q[1].map((a,i)=>`<button class="answer" id="ans${i}" onclick="answerQuiz(${i})"><b>${String.fromCharCode(65+i)}</b> &nbsp; ${esc(a)}</button>`).join("")}</div>
+ <div id="feedback"></div>`, "studies");
+}
+function answerQuiz(i){
+ if(quizAnswered)return;quizAnswered=true;
+ const q=quizzes[selectedQuiz].qs[quizIndex], correct=q[2];
+ document.querySelectorAll(".answer").forEach((b,j)=>{b.disabled=true;if(j===correct)b.classList.add("correct");if(j===i&&i!==correct)b.classList.add("wrong")});
+ const ok=i===correct; const qstate=state.quiz[selectedQuiz]||{correct:0,total:0};
+ qstate.total++;if(ok)qstate.correct++;state.quiz[selectedQuiz]=qstate;
+ if(ok)state.xp+=10;state.level=Math.floor(state.xp/250)+1;save();
+ document.getElementById("feedback").innerHTML=`<div class="card ${ok?"green":""}"><b>${ok?"✓ Resposta correta!":"✕ Resposta incorreta"}</b><p class="muted">Resposta: ${esc(q[1][correct])}</p><button class="btn block" onclick="nextQuestion()">${quizIndex+1<q.length?"Próxima pergunta":"Ver resultado"}</button></div>`;
+}
+function nextQuestion(){const total=quizzes[selectedQuiz].qs.length;if(quizIndex+1<total){quizIndex++;quizAnswered=false;render()}else{renderQuizResult()}}
+function renderQuizResult(){
+ const qstate=state.quiz[selectedQuiz]||{correct:0,total:0};
+ layout(`<div class="hero"><div class="emoji">🎉</div><h1>Quiz concluído!</h1><p>${qstate.correct} acertos registrados nesta matéria.</p><p class="muted">XP total: ${state.xp}</p></div>
+ <button class="btn block" onclick="go('studies')">Voltar para Estudos</button>`, "studies");
+}
+function renderProfile(){
+ layout(`<button class="back" onclick="go('home')">‹ Voltar</button><h1>⚙️ Dados locais</h1>
+ <div class="card"><p><b>XP:</b> ${state.xp}</p><p><b>Nível:</b> ${state.level}</p><p><b>Sequência:</b> ${state.streak} dias</p><p class="muted">Os dados desta versão inicial ficam salvos no armazenamento do próprio navegador.</p></div>
+ <button class="btn secondary block" onclick="resetApp()">Resetar progresso</button>`, "home");
+}
+function resetApp(){if(confirm("Apagar todo o progresso local?")){localStorage.removeItem(KEY);location.reload()}}
+render();
+
+</script>
+</body>
+</html>
